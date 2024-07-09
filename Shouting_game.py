@@ -1,5 +1,6 @@
 import pygame as pg
 import random
+import math
 
 pg.init()
 
@@ -75,11 +76,58 @@ class Enemy:
         引数 screen：画面surface
         """
         pg.draw.rect(screen, RED, (self.x, self.y, self.width, self.height))
-        
-        
+
+class Bullet:
+    """
+    敵味方が攻撃を行う弾を表すクラス。
+
+    Attributes:
+        x (float): 弾の現在のx座標
+        y (float): 弾の現在のy座標
+        dx (float): x方向の移動速度
+        dy (float): y方向の移動速度
+
+    Methods:
+        move(): 弾を移動させる
+        draw(screen): 弾を画面上に描画する
+    """
+
+    def __init__(self, x:float, y:float, target_x:float, target_y:float):
+        """
+        Bulletオブジェクトを初期化する。
+
+        Args:
+            x (float): 弾の初期x座標
+            y (float): 弾の初期y座標
+            target_x (float): 目標のx座標
+            target_y (float): 目標のy座標
+        """
+        self.x = x
+        self.y = y
+        angle = math.atan2(target_y - y, target_x - x)
+        speed = 5
+        self.dx = math.cos(angle) * speed
+        self.dy = math.sin(angle) * speed
+
+    def move(self):
+        """弾を現在の速度に基づいて移動させる。"""
+        self.x += self.dx
+        self.y += self.dy
+
+    def draw(self, screen: pg.Surface):
+        """
+        弾を画面上に描画する。
+
+        Args:
+            screen (pygame.Surface): 描画対象の画面
+        """
+        pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
+
 def main():
     player = Player()
     enemy = Enemy() # enemy関数の呼び出し
+    player_bullets = [] #プレイヤーと敵の弾を保持するリスト
+    enemy_bullets = []
     clock = pg.time.Clock()
 
     running = True
@@ -90,27 +138,52 @@ def main():
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     running = False
+                elif event.key == pg.K_SPACE: # スペースキーで弾の発射
+                    player_bullets.append(Bullet(player.x + player.width // 2, player.y,
+                                                 player.x + player.width // 2, 0))
 
         keys = pg.key.get_pressed()
         player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
 
         enemy.move()
-        
+
+
+        if random.random() < 0.02: # 弾の発生
+            enemy_bullets.append(Bullet(enemy.x + enemy.width // 2, enemy.y + enemy.height,
+                                        player.x + player.width // 2, player.y + player.height // 2))
+
+        for bullet in player_bullets[:]: # 弾の動きと衝突
+            bullet.move()
+            if bullet.y < 0:
+                player_bullets.remove(bullet)
+            elif (enemy.x < bullet.x < enemy.x + enemy.width and
+                  enemy.y < bullet.y < enemy.y + enemy.height):
+                player_bullets.remove(bullet)
+
+        for bullet in enemy_bullets[:]:
+            bullet.move()
+            if bullet.y > SCREEN_HEIGHT:
+                enemy_bullets.remove(bullet)
+            elif (player.x < bullet.x < player.x + player.width and
+                  player.y < bullet.y < player.y + player.height):
+                enemy_bullets.remove(bullet)
+
         screen.fill((0, 0, 0))
-        # プレイヤーの行動範囲を視覚的に表示する    
+        # プレイヤーの行動範囲を視覚的に表示する
         pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
         player.draw(screen)
         # 敵キャラを表示
         enemy.draw(screen)
+        for bullet in player_bullets + enemy_bullets: # 弾の描画
+            bullet.draw(screen)
         pg.display.flip()
         clock.tick(60)
 
     pg.quit()
-    
+
 
 if __name__ == "__main__":
     main()
 
-#弾の追加と衝突判定
 #HPとSPの追加、敵の動きの改善
 #敵の弾の改善、ゲームオーバー条件の追加
