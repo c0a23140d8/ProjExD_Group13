@@ -13,6 +13,7 @@ pg.display.set_caption("しゅぅてぃんぐげぇむ")
 # 色の定義
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 # ゲームエリア
@@ -30,6 +31,8 @@ class Player:
         self.x = SCREEN_WIDTH // 2 - self.width // 2
         self.y = SCREEN_HEIGHT // 2 - self.height // 2
         self.speed = 5
+        self.hp = 100 # プレイヤーHPの追加（初期化）
+        self.sp = 0 # プレイヤーSP(スキルポイント)の追加（初期化）
 
     def move(self, dx:int, dy:int):
         """
@@ -61,7 +64,10 @@ class Enemy:
         self.x = random.randint(0, SCREEN_WIDTH - self.width)
         self.y = 50
         self.speed = random.uniform(2, 5)
+        self.hp = 100 # 敵HPの追加（初期化）
         self.direction = random.choice([-1, 1])
+        self.change_direction_counter = 0 # 敵の移動判定のカウンターの初期化
+        self.change_direction_threshold = random.randint(60, 180) # 敵の停止時間をランダム値で設定
 
     def move(self):
         """
@@ -70,6 +76,13 @@ class Enemy:
         self.x += self.speed * self.direction
         if self.x <= 0 or self.x >= SCREEN_WIDTH - self.width:
             self.direction *= -1
+
+        self.change_direction_counter += 1 # 敵の移動判定のカウンターの更新
+        if self.change_direction_counter >= self.change_direction_threshold: # 敵の停止時間超えたら敵を移動させる
+            self.direction = random.choice([-1, 1]) # 敵の動くy軸+-の方向をランダムに設定
+            self.speed = random.uniform(2, 5) # 敵の移動量をランダムに設定
+            self.change_direction_counter = 0 # 敵の移動判定のカウンターのリセット
+            self.change_direction_threshold = random.randint(60, 180) # 敵の停止時間をランダム値で設定
 
     def draw(self, screen: pg.Surface):
         """
@@ -158,6 +171,8 @@ def main():
                 player_bullets.remove(bullet)
             elif (enemy.x < bullet.x < enemy.x + enemy.width and
                   enemy.y < bullet.y < enemy.y + enemy.height):
+                enemy.hp -= 10 # 敵HPの更新
+                player.sp += 5 # プレイヤーSPの更新
                 player_bullets.remove(bullet)
 
         for bullet in enemy_bullets[:]:
@@ -166,7 +181,11 @@ def main():
                 enemy_bullets.remove(bullet)
             elif (player.x < bullet.x < player.x + player.width and
                   player.y < bullet.y < player.y + player.height):
+                player.hp -= 1 # プレイヤーHPの更新
                 enemy_bullets.remove(bullet)
+
+        if player.hp <= 0 or enemy.hp <= 0: # ゲームの終了判定
+            running = False # ゲームを終了させる
 
         screen.fill((0, 0, 0))
         # プレイヤーの行動範囲を視覚的に表示する
@@ -176,6 +195,11 @@ def main():
         enemy.draw(screen)
         for bullet in player_bullets + enemy_bullets: # 弾の描画
             bullet.draw(screen)
+
+        pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20)) # プレイヤーHPのゲージを表示
+        pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20)) # 敵HPのゲージを表示
+        pg.draw.rect(screen, BLUE, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 30, player.sp * 2, 20)) # プレイヤーSPのゲージを表示
+
         pg.display.flip()
         clock.tick(60)
 
@@ -185,5 +209,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-#HPとSPの追加、敵の動きの改善
-#敵の弾の改善、ゲームオーバー条件の追加
+# 敵の弾の生成方法の改善、ゲームオーバー条件の追加
+# HPとSPの追加、敵の動きの改善
+# 敵の弾の改善、ゲームオーバー条件の追加
