@@ -21,6 +21,7 @@ GAME_AREA_SIZE = min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.6
 GAME_AREA_X = (SCREEN_WIDTH - GAME_AREA_SIZE) / 2
 GAME_AREA_Y = (SCREEN_HEIGHT - GAME_AREA_SIZE) / 2
 
+
 class Player:
     """
     Playerの操作するキャラのクラス
@@ -90,30 +91,30 @@ class Enemy:
         """
         pg.draw.rect(screen, RED, (self.x, self.y, self.width, self.height))
 
+
 class Bullet:
     """
     敵味方が攻撃を行う弾を表すクラス。
 
-    Attributes:
-        x (float): 弾の現在のx座標
-        y (float): 弾の現在のy座標
-        dx (float): x方向の移動速度
-        dy (float): y方向の移動速度
+    変数:
+        x : 弾の現在のx座標
+        y : 弾の現在のy座標
+        dx : x方向の移動速度
+        dy : y方向の移動速度
 
-    Methods:
+    メソッド:
         move(): 弾を移動させる
         draw(screen): 弾を画面上に描画する
     """
-
     def __init__(self, x:float, y:float, target_x:float, target_y:float):
         """
         Bulletオブジェクトを初期化する。
 
-        Args:
-            x (float): 弾の初期x座標
-            y (float): 弾の初期y座標
-            target_x (float): 目標のx座標
-            target_y (float): 目標のy座標
+        引数:
+            x : 弾の初期x座標
+            y : 弾の初期y座標
+            target_x : プレイヤーのx座標
+            target_y : プレイヤーのy座標
         """
         self.x = x
         self.y = y
@@ -131,7 +132,7 @@ class Bullet:
         """
         弾を画面上に描画する。
 
-        Args:
+        引数:
             screen (pygame.Surface): 描画対象の画面
         """
         pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
@@ -160,11 +161,27 @@ def main():
 
         enemy.move()
 
-
         if random.random() < 0.02: # 弾の発生
-            enemy_bullets.append(Bullet(enemy.x + enemy.width // 2, enemy.y + enemy.height,
-                                        player.x + player.width // 2, player.y + player.height // 2))
+            # 画面の四辺からランダムに弾を発射
+            side = random.choice(['top', 'bottom', 'left', 'right'])
+            if side == 'top':
+                x = random.randint(0, SCREEN_WIDTH)
+                y = 0
+            elif side == 'bottom':
+                x = random.randint(0, SCREEN_WIDTH)
+                y = SCREEN_HEIGHT
+            elif side == 'left':
+                x = 0
+                y = random.randint(0, SCREEN_HEIGHT)
+            else:  # right
+                x = SCREEN_WIDTH
+                y = random.randint(0, SCREEN_HEIGHT)
 
+            target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
+            target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
+            enemy_bullets.append(Bullet(x, y, target_x, target_y))
+        
+        # プレイヤーの弾の移動と当たり判定
         for bullet in player_bullets[:]: # 弾の動きと衝突
             bullet.move()
             if bullet.y < 0:
@@ -175,9 +192,11 @@ def main():
                 player.sp += 5 # プレイヤーSPの更新
                 player_bullets.remove(bullet)
 
+        # 敵の弾の移動と当たり判定
         for bullet in enemy_bullets[:]:
             bullet.move()
-            if bullet.y > SCREEN_HEIGHT:
+            if (bullet.x < 0 or bullet.x > SCREEN_WIDTH or
+                bullet.y < 0 or bullet.y > SCREEN_HEIGHT):
                 enemy_bullets.remove(bullet)
             elif (player.x < bullet.x < player.x + player.width and
                   player.y < bullet.y < player.y + player.height):
@@ -208,7 +227,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# 敵の弾の生成方法の改善、ゲームオーバー条件の追加
-# HPとSPの追加、敵の動きの改善
-# 敵の弾の改善、ゲームオーバー条件の追加
