@@ -8,6 +8,7 @@ pg.init()
 SCREEN_WIDTH = pg.display.Info().current_w
 SCREEN_HEIGHT = pg.display.Info().current_h
 screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pg.FULLSCREEN)
+BACKGROUND_IMAGE = pg.transform.scale(pg.image.load('fig/background.png'), (SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
 pg.display.set_caption("しゅぅてぃんぐげぇむ")
 
 # 色の定義
@@ -52,7 +53,8 @@ class Player:
         """
         引数 screen：画面surface
         """
-        pg.draw.rect(screen, BLUE, (self.x, self.y, self.width, self.height))
+        player_image = pg.image.load('fig/player.png').convert_alpha()  # プレイヤーの画像を読み込む
+        screen.blit(player_image, (self.x, self.y))  # プレイヤーの画像を描画
 
 
 class Enemy:
@@ -69,6 +71,8 @@ class Enemy:
         self.direction = random.choice([-1, 1])
         self.change_direction_counter = 0 # 敵の移動判定のカウンターの初期化
         self.change_direction_threshold = random.randint(60, 180) # 敵の停止時間をランダム値で設定
+        self.enemy_image = pg.image.load('fig/enemy.png').convert_alpha()  # 画像の読み込み
+        self.enemy_image = pg.transform.scale(self.enemy_image, (self.width, self.height))  # サイズ変更
 
     def move(self):
         """
@@ -89,7 +93,7 @@ class Enemy:
         """
         引数 screen：画面surface
         """
-        pg.draw.rect(screen, RED, (self.x, self.y, self.width, self.height))
+        screen.blit(self.enemy_image, (self.x, self.y))
 
 
 class Bullet:
@@ -106,7 +110,7 @@ class Bullet:
         move(): 弾を移動させる
         draw(screen): 弾を画面上に描画する
     """
-    def __init__(self, x:float, y:float, target_x:float, target_y:float):
+    def __init__(self, x:float, y:float, target_x:float, target_y:float, bullet_type: str):
         """
         Bulletオブジェクトを初期化する。
 
@@ -116,8 +120,24 @@ class Bullet:
             target_x : プレイヤーのx座標
             target_y : プレイヤーのy座標
         """
+        self.width = 10
+        self.height = 10
         self.x = x
         self.y = y
+        self.target_x = target_x
+        self.target_y = target_y
+        self.dx = 0
+        self.dy = 0
+        self.bullet_image = None
+        self.type = bullet_type  # 弾の種類を記録
+
+        # 弾の種類に応じて画像をロード
+        if bullet_type == 'player':
+            self.bullet_image = pg.image.load('fig/player_bullet.png').convert_alpha()
+        elif bullet_type == 'enemy':
+            self.bullet_image = pg.image.load('fig/enemy_bullet.png').convert_alpha()
+
+        self.bullet_image = pg.transform.scale(self.bullet_image, (self.width, self.height))  # サイズ変更
         angle = math.atan2(target_y - y, target_x - x)
         speed = 5
         self.dx = math.cos(angle) * speed
@@ -135,9 +155,14 @@ class Bullet:
         引数:
             screen (pygame.Surface): 描画対象の画面
         """
-        pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
+        screen.blit(self.bullet_image, (int(self.x), int(self.y)))
 
 def main():
+    global screen
+    frame_image = pg.image.load('fig/frame.png').convert_alpha()
+    frame_image = pg.transform.scale(frame_image, (GAME_AREA_SIZE+80, GAME_AREA_SIZE+140))
+    font = pg.font.Font(None, 24)
+    background = BACKGROUND_IMAGE
     player = Player()
     enemy = Enemy() # enemy関数の呼び出し
     player_bullets = [] #プレイヤーと敵の弾を保持するリスト
@@ -146,15 +171,18 @@ def main():
 
     running = True
     while running:
+
+        screen.blit(background, (0, 0))
+        screen.blit(frame_image, (GAME_AREA_X-40, GAME_AREA_Y-70))
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 running = False
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     running = False
-                elif event.key == pg.K_SPACE: # スペースキーで弾の発射
+                elif event.key == pg.K_SPACE:  # スペースキーで弾の発射
                     player_bullets.append(Bullet(player.x + player.width // 2, player.y,
-                                                 player.x + player.width // 2, 0))
+                                                player.x + player.width // 2, 0, 'player'))
 
         keys = pg.key.get_pressed()
         player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
@@ -179,8 +207,8 @@ def main():
 
             target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
             target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
-            enemy_bullets.append(Bullet(x, y, target_x, target_y))
-        
+            enemy_bullets.append(Bullet(x, y, target_x, target_y, 'enemy'))
+
         # プレイヤーの弾の移動と当たり判定
         for bullet in player_bullets[:]: # 弾の動きと衝突
             bullet.move()
@@ -206,18 +234,29 @@ def main():
         if player.hp <= 0 or enemy.hp <= 0: # ゲームの終了判定
             running = False # ゲームを終了させる
 
-        screen.fill((0, 0, 0))
+        #screen.fill((0, 0, 0))
         # プレイヤーの行動範囲を視覚的に表示する
-        pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+        # pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
         player.draw(screen)
         # 敵キャラを表示
         enemy.draw(screen)
         for bullet in player_bullets + enemy_bullets: # 弾の描画
             bullet.draw(screen)
 
-        pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20)) # プレイヤーHPのゲージを表示
-        pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20)) # 敵HPのゲージを表示
-        pg.draw.rect(screen, BLUE, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 30, player.sp * 2, 20)) # プレイヤーSPのゲージを表示
+        # プレイヤーのHPバーとテキストを描画
+        pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20))  # プレイヤーHPのゲージを表示
+        hp_text_surface = font.render(f"HP: {player.hp}", True, (255, 255, 255))  # テキストサーフェスを作成
+        screen.blit(hp_text_surface, (10, SCREEN_HEIGHT - 50))  # テキストを描画
+
+        # 敵のHPバーとテキストを描画
+        pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20))  # 敵HPのゲージを表示
+        enemy_hp_text_surface = font.render(f"Enemy HP: {enemy.hp}", True, (255, 255, 255))  # テキストサーフェスを作成
+        screen.blit(enemy_hp_text_surface, (10, 40))  # テキストを描画
+
+        # プレイヤーのSPバーとテキストを描画
+        pg.draw.rect(screen, BLUE, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 30, player.sp * 2, 20))  # プレイヤーSPのゲージを表示
+        sp_text_surface = font.render(f"SP: {player.sp}", True, (255, 255, 255))  # テキストサーフェスを作成
+        screen.blit(sp_text_surface, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 50))  # テキストを描画
 
         pg.display.flip()
         clock.tick(60)
