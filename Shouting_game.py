@@ -15,6 +15,7 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 
 # ゲームエリア
 GAME_AREA_SIZE = min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.6
@@ -34,6 +35,8 @@ class Player:
         self.speed = 5
         self.hp = 100 # プレイヤーHPの追加（初期化）
         self.sp = 0 # プレイヤーSP(スキルポイント)の追加（初期化）
+        self.ATF = False # ATフィールドのフラグ
+        self.ATF_t = 0 # ATフィールドの継続タイマー
 
     def move(self, dx:int, dy:int):
         """
@@ -47,6 +50,11 @@ class Player:
             GAME_AREA_Y < new_y < GAME_AREA_Y + GAME_AREA_SIZE - self.height):
             self.x = new_x
             self.y = new_y
+
+        if self.ATF_t <= 0:
+            self.ATF = False
+        else:
+            self.ATF_t -= 1
 
     def draw(self, screen: pg.Surface):
         """
@@ -155,6 +163,10 @@ def main():
                 elif event.key == pg.K_SPACE: # スペースキーで弾の発射
                     player_bullets.append(Bullet(player.x + player.width // 2, player.y,
                                                  player.x + player.width // 2, 0))
+                if event.key == pg.K_f and player.sp >= 20: # ATフィールドの発動判定
+                    player.ATF = True # ATフィールドON
+                    player.ATF_t = 600 # ATフィールドの持続時間設定
+                    player.sp -= 10 # ATフィールドの利用コスト消費
 
         keys = pg.key.get_pressed()
         player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
@@ -195,6 +207,12 @@ def main():
         # 敵の弾の移動と当たり判定
         for bullet in enemy_bullets[:]:
             bullet.move()
+            if player.ATF:
+                if (GAME_AREA_X < bullet.x < GAME_AREA_X + GAME_AREA_SIZE and
+                    GAME_AREA_Y < bullet.y < GAME_AREA_Y + GAME_AREA_SIZE):
+                    enemy_bullets.remove(bullet)
+                    continue
+
             if (bullet.x < 0 or bullet.x > SCREEN_WIDTH or
                 bullet.y < 0 or bullet.y > SCREEN_HEIGHT):
                 enemy_bullets.remove(bullet)
@@ -208,7 +226,11 @@ def main():
 
         screen.fill((0, 0, 0))
         # プレイヤーの行動範囲を視覚的に表示する
-        pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+        if player.ATF:
+            pg.draw.rect(screen, YELLOW, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+        else:
+            pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y , GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+
         player.draw(screen)
         # 敵キャラを表示
         enemy.draw(screen)
