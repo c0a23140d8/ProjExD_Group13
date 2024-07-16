@@ -2,6 +2,8 @@ import pygame as pg
 import random
 import math
 import os
+import time
+from typing import List, Optional
 
 pg.init()
 
@@ -166,6 +168,48 @@ class SoundManager:
             self.bgm.stop()
             
 
+class GameEndScreen:
+    """
+    ゲーム終了画面を管理するクラス。
+    ゲームクリアまたはゲームオーバー時に表示される。
+    """
+
+    def __init__(self, screen: pg.Surface, is_win: bool):  # 型ヒントを追加
+        """
+        GameEndScreenオブジェクトを初期化する。
+
+        Args:
+            screen (pg.Surface): 描画対象の画面
+            is_win (bool): ゲームクリアの場合True、ゲームオーバーの場合False
+        """
+        self.screen = screen
+        self.is_win = is_win
+        self.font = pg.font.Font(None, 74)
+        self.start_time = time.time()
+
+    def draw(self) -> None:
+        """
+        ゲーム終了画面を描画する。
+        """
+        self.screen.fill((0, 0, 0))
+        if self.is_win:
+            text = self.font.render("GAME CLEAR", True, (255, 255, 0))
+        else:
+            text = self.font.render("GAME OVER", True, (255, 0, 0))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2))
+        self.screen.blit(text, text_rect)
+        pg.display.flip()
+
+    def should_exit(self) -> bool:  
+        """
+        ゲーム終了画面を表示してから3秒経過したかどうかを判定する。
+
+        Returns:
+            bool: 3秒経過していればTrue、そうでなければFalse
+        """
+        return time.time() - self.start_time > 3
+
+
 def main():
     player = Player()
     enemy = Enemy() # enemy関数の呼び出し
@@ -180,6 +224,7 @@ def main():
     sound_manager.play_bgm()
 
     running = True
+    game_end_screen: Optional[GameEndScreen] = None
     while running:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -187,74 +232,83 @@ def main():
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     running = False
-                elif event.key == pg.K_SPACE: # スペースキーで弾の発射
+                elif event.key == pg.K_SPACE and not game_end_screen: # スペースキーで弾の発射
                     player_bullets.append(Bullet(player.x + player.width // 2, player.y,
                                                  player.x + player.width // 2, 0))
 
-        keys = pg.key.get_pressed()
-        player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
+        if not game_end_screen:
+            keys = pg.key.get_pressed()
+            player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
 
-        enemy.move()
+            enemy.move()
 
-        if random.random() < 0.02: # 弾の発生
-            # 画面の四辺からランダムに弾を発射
-            side = random.choice(['top', 'bottom', 'left', 'right'])
-            if side == 'top':
-                x = random.randint(0, SCREEN_WIDTH)
-                y = 0
-            elif side == 'bottom':
-                x = random.randint(0, SCREEN_WIDTH)
-                y = SCREEN_HEIGHT
-            elif side == 'left':
-                x = 0
-                y = random.randint(0, SCREEN_HEIGHT)
-            else:  # right
-                x = SCREEN_WIDTH
-                y = random.randint(0, SCREEN_HEIGHT)
+            if random.random() < 0.02: # 弾の発生
+                # 画面の四辺からランダムに弾を発射
+                side = random.choice(['top', 'bottom', 'left', 'right'])
+                if side == 'top':
+                    x = random.randint(0, SCREEN_WIDTH)
+                    y = 0
+                elif side == 'bottom':
+                    x = random.randint(0, SCREEN_WIDTH)
+                    y = SCREEN_HEIGHT
+                elif side == 'left':
+                    x = 0
+                    y = random.randint(0, SCREEN_HEIGHT)
+                else:  # right
+                    x = SCREEN_WIDTH
+                    y = random.randint(0, SCREEN_HEIGHT)
 
-            target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
-            target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
-            enemy_bullets.append(Bullet(x, y, target_x, target_y))
-        
-        # プレイヤーの弾の移動と当たり判定
-        for bullet in player_bullets[:]: # 弾の動きと衝突
-            bullet.move()
-            if bullet.y < 0:
-                player_bullets.remove(bullet)
-            elif (enemy.x < bullet.x < enemy.x + enemy.width and
-                  enemy.y < bullet.y < enemy.y + enemy.height):
-                enemy.hp -= 10 # 敵HPの更新
-                player.sp += 5 # プレイヤーSPの更新
-                player_bullets.remove(bullet)
+                target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
+                target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
+                enemy_bullets.append(Bullet(x, y, target_x, target_y))
+            
+            # プレイヤーの弾の移動と当たり判定
+            for bullet in player_bullets[:]: # 弾の動きと衝突
+                bullet.move()
+                if bullet.y < 0:
+                    player_bullets.remove(bullet)
+                elif (enemy.x < bullet.x < enemy.x + enemy.width and
+                    enemy.y < bullet.y < enemy.y + enemy.height):
+                    enemy.hp -= 10 # 敵HPの更新
+                    player.sp += 5 # プレイヤーSPの更新
+                    player_bullets.remove(bullet)
 
-        # 敵の弾の移動と当たり判定
-        for bullet in enemy_bullets[:]:
-            bullet.move()
-            if (bullet.x < 0 or bullet.x > SCREEN_WIDTH or
-                bullet.y < 0 or bullet.y > SCREEN_HEIGHT):
-                enemy_bullets.remove(bullet)
-            elif (player.x < bullet.x < player.x + player.width and
-                  player.y < bullet.y < player.y + player.height):
-                player.hp -= 1 # プレイヤーHPの更新
-                enemy_bullets.remove(bullet)
+            # 敵の弾の移動と当たり判定
+            for bullet in enemy_bullets[:]:
+                bullet.move()
+                if (bullet.x < 0 or bullet.x > SCREEN_WIDTH or
+                    bullet.y < 0 or bullet.y > SCREEN_HEIGHT):
+                    enemy_bullets.remove(bullet)
+                elif (player.x < bullet.x < player.x + player.width and
+                    player.y < bullet.y < player.y + player.height):
+                    player.hp -= 1 # プレイヤーHPの更新
+                    enemy_bullets.remove(bullet)
 
-        if player.hp <= 0 or enemy.hp <= 0: # ゲームの終了判定
-            running = False # ゲームを終了させる
-            sound_manager.stop_bgm()  # BGMを停止
+            if player.hp <= 0:
+                game_end_screen = GameEndScreen(screen, False)  # GameEndScreen の生成を追加
+                sound_manager.stop_bgm()
+            elif enemy.hp <= 0:
+                game_end_screen = GameEndScreen(screen, True)  # GameEndScreen の生成を追加
+                sound_manager.stop_bgm()
 
-        screen.fill((0, 0, 0))
-        # プレイヤーの行動範囲を視覚的に表示する
-        pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
-        player.draw(screen)
-        # 敵キャラを表示
-        enemy.draw(screen)
-        for bullet in player_bullets + enemy_bullets: # 弾の描画
-            bullet.draw(screen)
+            screen.fill((0, 0, 0))
+            # プレイヤーの行動範囲を視覚的に表示する
+            pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+            player.draw(screen)
+            # 敵キャラを表示
+            enemy.draw(screen)
+            for bullet in player_bullets + enemy_bullets: # 弾の描画
+                bullet.draw(screen)
 
-        pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20)) # プレイヤーHPのゲージを表示
-        pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20)) # 敵HPのゲージを表示
-        pg.draw.rect(screen, BLUE, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 30, player.sp * 2, 20)) # プレイヤーSPのゲージを表示
+            pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20)) # プレイヤーHPのゲージを表示
+            pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20)) # 敵HPのゲージを表示
+            pg.draw.rect(screen, BLUE, (SCREEN_WIDTH - 210, SCREEN_HEIGHT - 30, player.sp * 2, 20)) # プレイヤーSPのゲージを表示
 
+        else:
+            game_end_screen.draw()  
+            if game_end_screen.should_exit():  
+                running = False
+                
         pg.display.flip()
         clock.tick(60)
 
