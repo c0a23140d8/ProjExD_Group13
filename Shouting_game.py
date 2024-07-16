@@ -136,6 +136,47 @@ class Bullet:
             screen (pygame.Surface): 描画対象の画面
         """
         pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
+        
+
+class OmniBullet:
+    """
+    プレイヤーが全方向に発射する弾のクラス。
+    属性:
+        bullets (list): 発射された弾を保持するリスト。
+    メソッド:
+        __init__(x, y): OmniBulletオブジェクトを初期化する。
+        move(): 全ての弾を移動させる。
+        draw(screen): 全ての弾を画面上に描画する。
+    """
+    def __init__(self, x, y):
+        """
+        OmniBulletオブジェクトを初期化する。
+        引数:
+            x (float): 弾の初期x座標。
+            y (float): 弾の初期y座標。
+        """
+        self.bullets = []
+        speed = 5
+        for angle in range(0, 360, 45):  # 45度間隔で全方向に弾を作成
+            radians = math.radians(angle)
+            dx = math.cos(radians) * speed
+            dy = math.sin(radians) * speed
+            self.bullets.append(Bullet(x, y, x + dx * 10, y + dy * 10))
+    def move(self):
+        """
+        全ての弾を現在の速度に基づいて移動させる。
+        """
+        for bullet in self.bullets:
+            bullet.move()
+    def draw(self, screen):
+        """
+        全ての弾を画面上に描画する。
+        引数:
+            screen (pygame.Surface): 描画対象の画面。
+        """
+        for bullet in self.bullets:
+            bullet.draw(screen)
+
 
 def main():
     player = Player()
@@ -143,6 +184,7 @@ def main():
     player_bullets = [] #プレイヤーと敵の弾を保持するリスト
     enemy_bullets = []
     clock = pg.time.Clock()
+    omni_bullets = []  # 全方向攻撃の弾を保持するリスト
 
     running = True
     while running:
@@ -155,6 +197,11 @@ def main():
                 elif event.key == pg.K_SPACE: # スペースキーで弾の発射
                     player_bullets.append(Bullet(player.x + player.width // 2, player.y,
                                                  player.x + player.width // 2, 0))
+                elif event.key == pg.K_z:  # Zキーで全方向攻撃
+                    if player.sp >= 5:  # SPゲージが5以上の場合
+                        omni_bullets.append(OmniBullet(player.x + player.width // 2, player.y + player.height // 2))
+                        player.sp -= 5  # SPゲージ5を消費して全方位攻撃
+
 
         keys = pg.key.get_pressed()
         player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
@@ -180,6 +227,20 @@ def main():
             target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
             target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
             enemy_bullets.append(Bullet(x, y, target_x, target_y))
+        
+        # 全方向攻撃の弾の移動と当たり判定
+        for omni in omni_bullets[:]:
+            for bullet in omni.bullets[:]:
+                bullet.move()
+                if (bullet.x < 0 or bullet.x > SCREEN_WIDTH or
+                        bullet.y < 0 or bullet.y > SCREEN_HEIGHT):
+                    omni.bullets.remove(bullet)
+                elif (enemy.x < bullet.x < enemy.x + enemy.width and
+                    enemy.y < bullet.y < enemy.y + enemy.height):
+                    enemy.hp -= 10  # 敵HPの更新
+                    omni.bullets.remove(bullet)
+            if not omni.bullets:
+                omni_bullets.remove(omni)
         
         # プレイヤーの弾の移動と当たり判定
         for bullet in player_bullets[:]: # 弾の動きと衝突
@@ -214,6 +275,9 @@ def main():
         enemy.draw(screen)
         for bullet in player_bullets + enemy_bullets: # 弾の描画
             bullet.draw(screen)
+        for omni in omni_bullets:
+            omni.draw(screen)
+
 
         pg.draw.rect(screen, RED, (10, SCREEN_HEIGHT - 30, player.hp * 2, 20)) # プレイヤーHPのゲージを表示
         pg.draw.rect(screen, GREEN, (10, 10, enemy.hp * 2, 20)) # 敵HPのゲージを表示
