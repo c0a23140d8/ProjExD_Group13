@@ -136,7 +136,7 @@ class Bullet:
         弾を画面上に描画する。
 
         引数:
-            screen (pygame.Surface): 描画対象の画面
+            screen (pg.Surface): 描画対象の画面
         """
         pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
 
