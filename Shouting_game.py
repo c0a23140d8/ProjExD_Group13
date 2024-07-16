@@ -1,6 +1,7 @@
 import pygame as pg
 import random
 import math
+import os
 
 pg.init()
 
@@ -137,12 +138,46 @@ class Bullet:
         """
         pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
 
+
+class SoundManager:
+    """
+    ゲーム内のサウンドを管理するクラス
+    """
+    def __init__(self):
+        self.bgm = None
+        self.load_bgm()
+
+    def load_bgm(self):
+        """BGMファイルをロードする"""
+        bgm_path = os.path.join(os.path.dirname(__file__), '..\ex5\BGM\maou_bgm_8bit27.mp3')
+        try:
+            self.bgm = pg.mixer.Sound(bgm_path)
+        except pg.error:
+            print(f"警告: BGMファイル '{bgm_path}' をロードできませんでした。")
+
+    def play_bgm(self):
+        """BGMを再生する"""
+        if self.bgm:
+            self.bgm.play(loops=-1)  # ループ再生
+
+    def stop_bgm(self):
+        """BGMを停止する"""
+        if self.bgm:
+            self.bgm.stop()
+            
+
 def main():
     player = Player()
     enemy = Enemy() # enemy関数の呼び出し
     player_bullets = [] #プレイヤーと敵の弾を保持するリスト
     enemy_bullets = []
     clock = pg.time.Clock()
+    
+    # SoundManagerのインスタンスを作成
+    sound_manager = SoundManager()
+    
+    # BGMを再生
+    sound_manager.play_bgm()
 
     running = True
     while running:
@@ -205,6 +240,7 @@ def main():
 
         if player.hp <= 0 or enemy.hp <= 0: # ゲームの終了判定
             running = False # ゲームを終了させる
+            sound_manager.stop_bgm()  # BGMを停止
 
         screen.fill((0, 0, 0))
         # プレイヤーの行動範囲を視覚的に表示する
