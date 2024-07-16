@@ -234,7 +234,7 @@ class OmniBullet:
             radians = math.radians(angle)
             dx = math.cos(radians) * speed
             dy = math.sin(radians) * speed
-            self.bullets.append(Bullet(x, y, x + dx * 10, y + dy * 10))
+            self.bullets.append(Bullet(x, y, x + dx * 10, y + dy * 10, 'player'))
     def move(self):
         """
         全ての弾を現在の速度に基づいて移動させる。
@@ -329,7 +329,7 @@ def main():
             enemy_bullets.append(red_bullet)
 
             red_bullet_timer = 0
-            enemy_bullets.append(Bullet(x, y, target_x, target_y))
+            enemy_bullets.append(Bullet(x, y, target_x, target_y, 'enemy'))
         
         # 全方向攻撃の弾の移動と当たり判定
         for omni in omni_bullets[:]:
