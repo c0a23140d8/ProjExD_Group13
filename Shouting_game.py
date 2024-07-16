@@ -401,12 +401,11 @@ def main():
             running = False # ゲームを終了させる
             sound_manager.stop_bgm() # BGMを停止
 
-        screen.fill((0, 0, 0))
         # プレイヤーの行動範囲を視覚的に表示する
-        if player.ATF:
-            pg.draw.rect(screen, YELLOW, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
-        else:
-            pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y , GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+        # if player.ATF:
+        #     pg.draw.rect(screen, YELLOW, (GAME_AREA_X, GAME_AREA_Y, GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
+        # else:
+        #     pg.draw.rect(screen, WHITE, (GAME_AREA_X, GAME_AREA_Y , GAME_AREA_SIZE, GAME_AREA_SIZE), 2)
 
         player.draw(screen)
         # 敵キャラを表示
