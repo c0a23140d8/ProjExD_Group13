@@ -193,7 +193,7 @@ class SoundManager:
 
     def load_bgm(self):
         """BGMファイルをロードする"""
-        bgm_path = os.path.join(os.path.dirname(__file__), '..\ex5\BGM\maou_bgm_8bit27.mp3')
+        bgm_path = os.path.join(os.path.dirname(__file__), '..\BGM\maou_bgm_8bit27.mp3')
         try:
             self.bgm = pg.mixer.Sound(bgm_path)
         except pg.error:
