@@ -15,6 +15,7 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 
 # ゲームエリア
 GAME_AREA_SIZE = min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.6
@@ -118,15 +119,23 @@ class Bullet:
         """
         self.x = x
         self.y = y
+        self.speed = 5
         angle = math.atan2(target_y - y, target_x - x)
-        speed = 5
-        self.dx = math.cos(angle) * speed
-        self.dy = math.sin(angle) * speed
+        self.dx = math.cos(angle) * self.speed
+        self.dy = math.sin(angle) * self.speed
+        self.is_enemy_bullet = True
+        self.is_normal_enemy_bullet = False
+        self.is_inside_square = False
 
     def move(self):
         """弾を現在の速度に基づいて移動させる。"""
         self.x += self.dx
         self.y += self.dy
+
+    def bounce(self):
+        angle = random.uniform(0, 2 * math.pi)
+        self.dx = math.cos(angle) * self.speed
+        self.dy = math.sin(angle) * self.speed
 
     def draw(self, screen: pg.Surface):
         """
@@ -135,7 +144,20 @@ class Bullet:
         引数:
             screen (pygame.Surface): 描画対象の画面
         """
-        pg.draw.circle(screen, WHITE, (int(self.x), int(self.y)), 5)
+        if self.is_normal_enemy_bullet:
+            color = WHITE  # 通常の敵の弾は白色
+        elif self.is_enemy_bullet:
+            color = YELLOW  # その他の敵の弾は黄色
+        else:
+            color = BLUE  # プレイヤーの弾は青色
+        pg.draw.circle(screen, color, (int(self.x), int(self.y)), 5)
+
+    @classmethod
+    def create_normal_enemy_bullet(cls, enemy, player):
+        bullet = cls(enemy.x + enemy.width // 2, enemy.y + enemy.height,
+                     player.x + player.width // 2, player.y + player.height // 2)
+        bullet.is_normal_enemy_bullet = True
+        return bullet
 
 def main():
     player = Player()
@@ -143,6 +165,9 @@ def main():
     player_bullets = [] #プレイヤーと敵の弾を保持するリスト
     enemy_bullets = []
     clock = pg.time.Clock()
+
+    red_bullet_timer = 0  # 赤い弾のタイマーを初期化
+    red_bullet_interval = 10 * 60  # 30秒 * 60フレーム/秒 = 1800フレーム
 
     running = True
     while running:
@@ -153,15 +178,23 @@ def main():
                 if event.key == pg.K_ESCAPE:
                     running = False
                 elif event.key == pg.K_SPACE: # スペースキーで弾の発射
-                    player_bullets.append(Bullet(player.x + player.width // 2, player.y,
-                                                 player.x + player.width // 2, 0))
+                    bullet = Bullet(player.x + player.width // 2, player.y,
+                                    player.x + player.width // 2, 0)
+                    bullet.is_enemy_bullet = False
+                    player_bullets.append(bullet)
 
         keys = pg.key.get_pressed()
         player.move(keys[pg.K_RIGHT] - keys[pg.K_LEFT], keys[pg.K_DOWN] - keys[pg.K_UP])
 
         enemy.move()
 
-        if random.random() < 0.02: # 弾の発生
+         # 敵の通常攻撃（白い弾）
+        if random.random() < 0.02:
+            enemy_bullets.append(Bullet.create_normal_enemy_bullet(enemy, player))
+
+        # 赤い弾の生成（30秒に1回）
+        red_bullet_timer += 1
+        if red_bullet_timer >= red_bullet_interval:
             # 画面の四辺からランダムに弾を発射
             side = random.choice(['top', 'bottom', 'left', 'right'])
             if side == 'top':
@@ -179,7 +212,12 @@ def main():
 
             target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
             target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
-            enemy_bullets.append(Bullet(x, y, target_x, target_y))
+            red_bullet = Bullet(x, y, target_x, target_y)
+            red_bullet.is_enemy_bullet = True
+            red_bullet.is_normal_enemy_bullet = False
+            enemy_bullets.append(red_bullet)
+
+            red_bullet_timer = 0
         
         # プレイヤーの弾の移動と当たり判定
         for bullet in player_bullets[:]: # 弾の動きと衝突
@@ -200,8 +238,21 @@ def main():
                 enemy_bullets.remove(bullet)
             elif (player.x < bullet.x < player.x + player.width and
                   player.y < bullet.y < player.y + player.height):
-                player.hp -= 1 # プレイヤーHPの更新
+                player.hp -= 1
                 enemy_bullets.remove(bullet)
+            elif not bullet.is_normal_enemy_bullet:  # 通常の敵の弾でない場合のみバウンド処理
+                if not bullet.is_inside_square:
+                    if (GAME_AREA_X < bullet.x < GAME_AREA_X + GAME_AREA_SIZE and
+                        GAME_AREA_Y < bullet.y < GAME_AREA_Y + GAME_AREA_SIZE):
+                        bullet.is_inside_square = True
+                        bullet.bounce()
+                else:
+                    if (bullet.x < GAME_AREA_X or bullet.x > GAME_AREA_X + GAME_AREA_SIZE or
+                        bullet.y < GAME_AREA_Y or bullet.y > GAME_AREA_Y + GAME_AREA_SIZE):
+                        bullet.bounce()
+                        # 中央の四角形内に戻す
+                        bullet.x = max(GAME_AREA_X, min(bullet.x, GAME_AREA_X + GAME_AREA_SIZE))
+                        bullet.y = max(GAME_AREA_Y, min(bullet.y, GAME_AREA_Y + GAME_AREA_SIZE))
 
         if player.hp <= 0 or enemy.hp <= 0: # ゲームの終了判定
             running = False # ゲームを終了させる
