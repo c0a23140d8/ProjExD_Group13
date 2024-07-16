@@ -153,9 +153,24 @@ class Bullet:
         pg.draw.circle(screen, color, (int(self.x), int(self.y)), 5)
 
     @classmethod
-    def create_normal_enemy_bullet(cls, enemy, player):
-        bullet = cls(enemy.x + enemy.width // 2, enemy.y + enemy.height,
-                     player.x + player.width // 2, player.y + player.height // 2)
+    def create_normal_enemy_bullet(cls):
+        side = random.choice(['top', 'bottom', 'left', 'right'])
+        if side == 'top':
+            x = random.randint(0, SCREEN_WIDTH)
+            y = 0
+        elif side == 'bottom':
+            x = random.randint(0, SCREEN_WIDTH)
+            y = SCREEN_HEIGHT
+        elif side == 'left':
+            x = 0
+            y = random.randint(0, SCREEN_HEIGHT)
+        else:  # right
+            x = SCREEN_WIDTH
+            y = random.randint(0, SCREEN_HEIGHT)
+
+        target_x = GAME_AREA_X + GAME_AREA_SIZE // 2
+        target_y = GAME_AREA_Y + GAME_AREA_SIZE // 2
+        bullet = cls(x, y, target_x, target_y)
         bullet.is_normal_enemy_bullet = True
         return bullet
 
@@ -189,9 +204,10 @@ def main():
         enemy.move()
 
          # 敵の通常攻撃（白い弾）
+        # 敵の通常攻撃（白い弾）
         if random.random() < 0.02:
-            enemy_bullets.append(Bullet.create_normal_enemy_bullet(enemy, player))
-
+            enemy_bullets.append(Bullet.create_normal_enemy_bullet())
+            
         # 赤い弾の生成（30秒に1回）
         red_bullet_timer += 1
         if red_bullet_timer >= red_bullet_interval:
