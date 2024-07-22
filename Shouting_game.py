@@ -269,10 +269,6 @@ class GameEndScreen:
     def __init__(self, screen: pg.Surface, is_win: bool):  # 型ヒントを追加
         """
         GameEndScreenオブジェクトを初期化する。
-
-        Args:
-            screen (pg.Surface): 描画対象の画面
-            is_win (bool): ゲームクリアの場合True、ゲームオーバーの場合False
         """
         self.screen = screen
         self.is_win = is_win
@@ -295,11 +291,9 @@ class GameEndScreen:
     def should_exit(self) -> bool:  
         """
         ゲーム終了画面を表示してから3秒経過したかどうかを判定する。
-
-        Returns:
-            bool: 3秒経過していればTrue、そうでなければFalse
         """
         return time.time() - self.start_time > 3
+
 
 def main():
     global screen
