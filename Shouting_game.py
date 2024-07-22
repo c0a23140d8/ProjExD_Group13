@@ -218,7 +218,6 @@ class SoundManager:
         if self.bgm:
             self.bgm.stop()
 
-        
 
 class OmniBullet:
     """
